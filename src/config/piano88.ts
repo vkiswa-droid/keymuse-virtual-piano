@@ -29,39 +29,24 @@ export interface Piano88Key {
 export const TOTAL_KEYS = 88;
 export const TOTAL_WHITE_KEYS = 52;
 export const TOTAL_BLACK_KEYS = 36;
-export const MIN_MIDI = 21;  // A0
-export const MAX_MIDI = 108; // C8
 
-export const PITCH_CLASSES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+import { 
+  MIN_MIDI, 
+  MAX_MIDI, 
+  PITCH_CLASSES, 
+  midiToFrequency, 
+  midiToNoteName, 
+  noteNameToMidi 
+} from './pitchUtils';
 
-/**
- * Calculates accurate frequency in Hz for equal temperament standard A4 = 440Hz
- */
-export function midiToFrequency(midi: number): number {
-  return 440 * Math.pow(2, (midi - 69) / 12);
-}
-
-/**
- * Converts MIDI note number to note name string (e.g., 60 -> "C4", 69 -> "A4")
- */
-export function midiToNoteName(midi: number): string {
-  const pitch = PITCH_CLASSES[midi % 12];
-  const octave = Math.floor(midi / 12) - 1;
-  return `${pitch}${octave}`;
-}
-
-/**
- * Converts note name to MIDI note number (e.g., "C4" -> 60, "A4" -> 69)
- */
-export function noteNameToMidi(noteName: string): number {
-  const match = noteName.match(/^([A-G]#?)(-?\d+)$/);
-  if (!match) return 60;
-  const pitch = match[1];
-  const octave = parseInt(match[2], 10);
-  const pitchIndex = PITCH_CLASSES.indexOf(pitch);
-  if (pitchIndex === -1) return 60;
-  return (octave + 1) * 12 + pitchIndex;
-}
+export { 
+  MIN_MIDI, 
+  MAX_MIDI, 
+  PITCH_CLASSES, 
+  midiToFrequency, 
+  midiToNoteName, 
+  noteNameToMidi 
+};
 
 /**
  * Generate the complete standard 88-key piano model

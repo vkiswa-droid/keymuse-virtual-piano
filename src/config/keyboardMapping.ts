@@ -5,7 +5,7 @@
  * Covers all 88 notes from A0 (MIDI 21) to C8 (MIDI 108).
  */
 
-import { midiToNoteName, noteNameToMidi, MIN_MIDI, MAX_MIDI } from './piano88';
+import { midiToNoteName, noteNameToMidi, MIN_MIDI, MAX_MIDI } from './pitchUtils';
 
 export interface PhysicalKeyDef {
   code: string;       // Standard KeyboardEvent.code (e.g. 'KeyQ', 'Digit1')
