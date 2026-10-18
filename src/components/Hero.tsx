@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Sparkles, Keyboard, ShieldCheck, Zap } from 'lucide-react';
+import { Play, Sparkles, Keyboard, Zap, Cable, CheckCircle2 } from 'lucide-react';
 import { APP_TAGLINE } from '../config/constants';
 
 interface HeroProps {
@@ -9,84 +9,117 @@ interface HeroProps {
 
 export const Hero: React.FC<HeroProps> = ({ onStartPlaying, onExploreSongs }) => {
   return (
-    <section className="hero-section">
-      <div style={{ maxWidth: 840, margin: '0 auto' }}>
-        {/* Value badge */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
-          <div className="pill-badge purple" style={{ gap: '0.5rem' }}>
-            <Sparkles size={14} color="#a78bfa" />
-            <span>100% Free Virtual Instrument • No Hardware Required</span>
-          </div>
+    <section style={{
+      textAlign: 'center',
+      padding: '2.5rem 1rem 1.75rem',
+      maxWidth: 880,
+      margin: '0 auto',
+    }}>
+      {/* Category Pill */}
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: '20px', color: '#38bdf8', fontSize: '0.75rem', fontWeight: 600, marginBottom: '16px' }}>
+        <Sparkles size={13} />
+        <span>Free Browser Instrument • Real Sampled Acoustic Grand Piano</span>
+      </div>
+
+      {/* Main Vision Heading */}
+      <h1 style={{
+        fontSize: 'clamp(2rem, 4.5vw, 3.25rem)',
+        fontWeight: 800,
+        letterSpacing: '-0.025em',
+        lineHeight: 1.15,
+        color: '#f8fafc',
+        marginBottom: '14px',
+      }}>
+        {APP_TAGLINE}
+      </h1>
+
+      {/* Subtitle */}
+      <p style={{
+        fontSize: '1.05rem',
+        color: '#94a3b8',
+        lineHeight: 1.6,
+        maxWidth: 680,
+        margin: '0 auto 24px',
+      }}>
+        Turn your laptop keyboard or USB MIDI controller into a professional acoustic piano. Practice masterworks with our falling-note visualizer, import custom MIDI files, and learn music theory without expensive equipment.
+      </p>
+
+      {/* Action Buttons */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '12px',
+        flexWrap: 'wrap',
+        marginBottom: '24px',
+      }}>
+        <button
+          onClick={onStartPlaying}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '12px 24px',
+            borderRadius: '6px',
+            background: '#2563eb',
+            color: '#ffffff',
+            border: 'none',
+            fontSize: '0.95rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)',
+          }}
+        >
+          <Play size={16} fill="currentColor" />
+          <span>Start Playing</span>
+        </button>
+
+        <button
+          onClick={onExploreSongs}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '12px 22px',
+            borderRadius: '6px',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            color: '#f8fafc',
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          <Sparkles size={16} color="#38bdf8" />
+          <span>Practice Falling Notes</span>
+        </button>
+      </div>
+
+      {/* Feature Spec Strip */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: '20px',
+        flexWrap: 'wrap',
+        fontSize: '0.775rem',
+        color: '#64748b',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <Keyboard size={13} color="#94a3b8" />
+          <span>Full 88-Key Bed (A0–C8)</span>
         </div>
-
-        {/* Vision Heading */}
-        <h1 className="hero-title">
-          {APP_TAGLINE}
-        </h1>
-
-        {/* Subtitle */}
-        <p className="hero-subtitle">
-          Turn your laptop keyboard into a responsive, expressive musical piano. Practice famous melodies note-by-note, master chords with guided feedback, and record your songs without spending a single dollar.
-        </p>
-
-        {/* Action CTAs */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '1rem',
-          flexWrap: 'wrap',
-          marginBottom: '2rem',
-        }}>
-          <button 
-            onClick={onStartPlaying}
-            className="btn btn-primary"
-            style={{ 
-              fontSize: '1.05rem', 
-              padding: '0.85rem 1.85rem',
-              borderRadius: 'var(--radius-lg)',
-            }}
-          >
-            <Play size={18} fill="#ffffff" />
-            <span>Start Playing</span>
-          </button>
-
-          <button 
-            onClick={onExploreSongs}
-            className="btn btn-secondary"
-            style={{ 
-              fontSize: '1.05rem', 
-              padding: '0.85rem 1.75rem',
-              borderRadius: 'var(--radius-lg)',
-            }}
-          >
-            <Sparkles size={18} color="#06b6d4" />
-            <span>Practice Songs</span>
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <Zap size={13} color="#38bdf8" />
+          <span>Sampled Acoustic Grand</span>
         </div>
-
-        {/* Key Feature Badges */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '1.5rem',
-          flexWrap: 'wrap',
-          color: 'var(--text-muted)',
-          fontSize: '0.825rem',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Keyboard size={15} color="#8b5cf6" />
-            <span>17 Keys Mapped to Home Row</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Zap size={15} color="#06b6d4" />
-            <span>Low-Latency Web Audio Engine</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <ShieldCheck size={15} color="#10b981" />
-            <span>No Account • Completely Free</span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <Cable size={13} color="#c084fc" />
+          <span>Web MIDI Hardware Support</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <CheckCircle2 size={13} color="#34d399" />
+          <span>Zero Sign-In • 100% Free</span>
         </div>
       </div>
     </section>

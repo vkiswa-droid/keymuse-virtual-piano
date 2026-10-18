@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Music, 
   Volume2, 
@@ -8,15 +8,17 @@ import {
   BookOpen, 
   Disc, 
   Sparkles,
-  Sliders
+  Sliders,
+  Cable,
+  CheckCircle2,
+  Loader2
 } from 'lucide-react';
 import { APP_NAME } from '../config/constants';
-import { soundEngine } from '../audio/soundEngine';
+import { sampleEngine, AudioEngineStatus } from '../audio/sampleEngine';
 
 interface NavbarProps {
-  activeTab: 'play' | 'songs' | 'learn' | 'record';
-  onSelectTab: (tab: 'play' | 'songs' | 'learn' | 'record') => void;
-  audioState: AudioContextState | 'uninitialized';
+  activeTab: 'play' | 'practice' | 'learn' | 'studio';
+  onSelectTab: (tab: 'play' | 'practice' | 'learn' | 'studio') => void;
   onOpenHelp: () => void;
   volume: number;
   onVolumeChange: (vol: number) => void;
@@ -27,32 +29,47 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   onSelectTab,
-  audioState,
   onOpenHelp,
   volume,
   onVolumeChange,
   isMuted,
   onToggleMute,
 }) => {
-  const isAudioReady = audioState === 'running';
+  const [audioStatus, setAudioStatus] = useState<AudioEngineStatus>(sampleEngine.getStatus());
+  const [loadProgress, setLoadProgress] = useState<number>(sampleEngine.getLoadProgress());
+  const [midiDevices, setMidiDevices] = useState<string[]>([]);
+
+  useEffect(() => {
+    const unsubStatus = sampleEngine.subscribeStatus((status, progress) => {
+      setAudioStatus(status);
+      setLoadProgress(progress);
+    });
+
+    const unsubMidi = sampleEngine.subscribeMidiDevices((devices) => {
+      setMidiDevices(devices);
+    });
+
+    return () => {
+      unsubStatus();
+      unsubMidi();
+    };
+  }, []);
 
   const handleAudioInitClick = () => {
-    soundEngine.initAudio();
+    sampleEngine.initAudio();
   };
 
   return (
     <header style={{
-      borderBottom: '1px solid var(--border-subtle)',
-      background: 'rgba(7, 10, 18, 0.85)',
-      WebkitBackdropFilter: 'blur(16px)',
-      backdropFilter: 'blur(16px)',
+      borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+      background: '#0d0f14',
       position: 'sticky',
       top: 0,
       zIndex: 100,
-      padding: '0.75rem 1.5rem',
+      padding: '0.65rem 1.5rem',
     }}>
       <div style={{
-        maxWidth: 1320,
+        maxWidth: 1400,
         margin: '0 auto',
         display: 'flex',
         alignItems: 'center',
@@ -60,7 +77,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         gap: '1rem',
         flexWrap: 'wrap',
       }}>
-        {/* Brand Logo */}
+        {/* Brand Logo & Name */}
         <div 
           onClick={() => onSelectTab('play')}
           style={{
@@ -73,133 +90,228 @@ export const Navbar: React.FC<NavbarProps> = ({
           }}
         >
           <div style={{
-            width: 40,
-            height: 40,
-            borderRadius: 12,
-            background: 'linear-gradient(135deg, #7c3aed, #06b6d4)',
+            width: 34,
+            height: 34,
+            borderRadius: 6,
+            background: 'linear-gradient(135deg, #1e293b, #0f172a)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 14px rgba(124, 58, 237, 0.4)',
           }}>
-            <Music size={22} color="#ffffff" />
+            <Music size={18} color="#38bdf8" />
           </div>
           <div>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span style={{
-                fontSize: '1.35rem',
+                fontSize: '1.2rem',
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
-                background: 'linear-gradient(135deg, #ffffff, #c4b5fd)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                color: '#f8fafc',
               }}>
                 {APP_NAME}
               </span>
-              <span className="pill-badge purple" style={{ fontSize: '0.65rem', padding: '0.15rem 0.45rem' }}>
-                Free Instrument
+              <span style={{
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                padding: '1px 6px',
+                borderRadius: '3px',
+                background: 'rgba(56, 189, 248, 0.15)',
+                color: '#38bdf8',
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+              }}>
+                88-Key Pro
               </span>
             </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
-              Virtual Laptop Piano
-            </p>
           </div>
         </div>
 
-        {/* Center Navigation Tabs */}
+        {/* Center DAW-Style Navigation Tabs: Play / Practice / Learn / Studio */}
         <nav style={{
           display: 'flex',
-          gap: '0.4rem',
-          background: 'rgba(15, 23, 42, 0.7)',
-          padding: '4px',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--border-subtle)',
+          gap: '2px',
+          background: '#141720',
+          padding: '3px',
+          borderRadius: '6px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
         }}>
           <button
-            className={`btn btn-sm ${activeTab === 'play' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => onSelectTab('play')}
-            style={{ border: 'none' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '4px',
+              border: 'none',
+              background: activeTab === 'play' ? '#2563eb' : 'transparent',
+              color: activeTab === 'play' ? '#ffffff' : '#94a3b8',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'background 0.15s ease',
+            }}
           >
-            <Music size={15} />
-            <span>Play Piano</span>
+            <Music size={14} />
+            <span>Play</span>
           </button>
 
           <button
-            className={`btn btn-sm ${activeTab === 'songs' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => onSelectTab('songs')}
-            style={{ border: 'none' }}
+            onClick={() => onSelectTab('practice')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '4px',
+              border: 'none',
+              background: activeTab === 'practice' ? '#0891b2' : 'transparent',
+              color: activeTab === 'practice' ? '#ffffff' : '#94a3b8',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'background 0.15s ease',
+            }}
           >
-            <Sparkles size={15} />
-            <span>Practice Songs</span>
+            <Sparkles size={14} />
+            <span>Practice (Falling Notes)</span>
           </button>
 
           <button
-            className={`btn btn-sm ${activeTab === 'learn' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => onSelectTab('learn')}
-            style={{ border: 'none' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '4px',
+              border: 'none',
+              background: activeTab === 'learn' ? '#7c3aed' : 'transparent',
+              color: activeTab === 'learn' ? '#ffffff' : '#94a3b8',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'background 0.15s ease',
+            }}
           >
-            <BookOpen size={15} />
-            <span>Beginner Academy</span>
+            <BookOpen size={14} />
+            <span>Learn</span>
           </button>
 
           <button
-            className={`btn btn-sm ${activeTab === 'record' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => onSelectTab('record')}
-            style={{ border: 'none' }}
+            onClick={() => onSelectTab('studio')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '4px',
+              border: 'none',
+              background: activeTab === 'studio' ? '#e11d48' : 'transparent',
+              color: activeTab === 'studio' ? '#ffffff' : '#94a3b8',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'background 0.15s ease',
+            }}
           >
-            <Disc size={15} />
-            <span>Recording Studio</span>
+            <Disc size={14} />
+            <span>Studio</span>
           </button>
         </nav>
 
-        {/* Right Controls: Audio Status, Volume, Shortcuts */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-        }}>
-          {/* Audio Context Status Indicator */}
+        {/* Right Controls: Real Sample Status, MIDI Device Badge, Volume, Keymap */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Sampled Audio Engine Status */}
           <button
             onClick={handleAudioInitClick}
-            title={isAudioReady ? "Audio engine active with low latency" : "Click to activate Web Audio engine"}
-            className={`pill-badge ${isAudioReady ? 'active' : 'cyan'}`}
             style={{
-              cursor: isAudioReady ? 'default' : 'pointer',
-              border: 'none',
-              fontFamily: 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '5px 10px',
+              borderRadius: '4px',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: audioStatus === 'ready' 
+                ? 'rgba(16, 185, 129, 0.12)' 
+                : audioStatus === 'loading'
+                ? 'rgba(56, 189, 248, 0.12)'
+                : 'rgba(255, 255, 255, 0.04)',
+              color: audioStatus === 'ready' 
+                ? '#34d399' 
+                : audioStatus === 'loading'
+                ? '#38bdf8'
+                : '#94a3b8',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              cursor: audioStatus === 'ready' ? 'default' : 'pointer',
             }}
+            title={audioStatus === 'ready' ? "Sampled Acoustic Grand Piano Active" : "Click to initialize audio"}
           >
-            <Radio size={12} className={isAudioReady ? '' : 'animate-pulse'} />
-            <span>{isAudioReady ? 'Audio Active' : 'Click to Enable Sound'}</span>
+            {audioStatus === 'loading' ? (
+              <>
+                <Loader2 size={12} className="animate-spin" />
+                <span>Downloading Grand: {loadProgress}%</span>
+              </>
+            ) : audioStatus === 'ready' ? (
+              <>
+                <CheckCircle2 size={12} />
+                <span>Sampled Grand</span>
+              </>
+            ) : audioStatus === 'fallback' ? (
+              <>
+                <Radio size={12} />
+                <span>Modeled Grand</span>
+              </>
+            ) : (
+              <>
+                <Radio size={12} />
+                <span>Click to Enable Audio</span>
+              </>
+            )}
           </button>
 
-          {/* Volume Control */}
+          {/* Web MIDI Status Badge */}
+          {midiDevices.length > 0 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              background: 'rgba(168, 85, 247, 0.15)',
+              border: '1px solid rgba(168, 85, 247, 0.3)',
+              borderRadius: '4px',
+              color: '#c084fc',
+              fontSize: '0.725rem',
+              fontWeight: 600,
+            }} title={`Connected MIDI Device: ${midiDevices.join(', ')}`}>
+              <Cable size={12} />
+              <span>MIDI Active</span>
+            </div>
+          )}
+
+          {/* Master Volume */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem',
-            background: 'rgba(255, 255, 255, 0.05)',
-            padding: '0.35rem 0.65rem',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-subtle)',
+            gap: '6px',
+            background: '#141720',
+            padding: '3px 8px',
+            borderRadius: '4px',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
           }}>
             <button
               onClick={onToggleMute}
-              className="btn btn-icon"
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: isMuted ? 'var(--accent-rose)' : 'var(--text-dim)',
-                padding: '2px',
+                color: isMuted ? '#f43f5e' : '#94a3b8',
                 cursor: 'pointer',
+                display: 'flex',
+                padding: '2px',
               }}
-              title={isMuted ? "Unmute sound" : "Mute sound"}
             >
-              {isMuted ? <VolumeX size={17} /> : <Volume2 size={17} />}
+              {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
             </button>
             <input
               type="range"
@@ -208,20 +320,30 @@ export const Navbar: React.FC<NavbarProps> = ({
               step="0.05"
               value={isMuted ? 0 : volume}
               onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-              style={{ width: 68 }}
+              style={{ width: 60 }}
               className="custom-range"
-              title={`Master Volume: ${Math.round(volume * 100)}%`}
             />
           </div>
 
-          {/* Keyboard Shortcuts Help */}
+          {/* Keyboard Shortcuts */}
           <button
             onClick={onOpenHelp}
-            className="btn btn-secondary btn-sm"
-            title="View laptop keyboard layout and shortcuts"
+            style={{
+              padding: '6px 10px',
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '4px',
+              color: '#94a3b8',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+            }}
           >
-            <HelpCircle size={16} />
-            <span className="desktop-only">Keymap</span>
+            <HelpCircle size={14} />
+            <span>Keymap</span>
           </button>
         </div>
       </div>

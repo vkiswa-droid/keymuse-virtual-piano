@@ -1,24 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Sliders, 
-  Disc, 
   Volume2, 
   VolumeX, 
-  Layers, 
-  Flame, 
-  Activity, 
+  Footprints, 
+  Clock, 
   Play, 
   Square, 
-  Clock, 
-  Info,
-  Footprints
+  Radio, 
+  Sparkles, 
+  Activity 
 } from 'lucide-react';
-import { SoundType } from '../types';
-import { soundEngine } from '../audio/soundEngine';
+import { sampleEngine } from '../audio/sampleEngine';
 
 interface SoundControlsProps {
-  soundType: SoundType;
-  onSoundTypeChange: (type: SoundType) => void;
   sustain: boolean;
   onSustainToggle: () => void;
   octaveOffset: number;
@@ -26,72 +21,86 @@ interface SoundControlsProps {
 }
 
 export const SoundControls: React.FC<SoundControlsProps> = ({
-  soundType,
-  onSoundTypeChange,
   sustain,
   onSustainToggle,
   octaveOffset,
   onOctaveChange,
 }) => {
   // Metronome state
-  const [isMetronomeOn, setIsMetronomeOn] = useState(soundEngine.isMetronomeActive());
-  const [bpm, setBpm] = useState(soundEngine.getMetronomeBpm());
+  const [isMetronomeOn, setIsMetronomeOn] = useState(false);
+  const [bpm, setBpm] = useState(108);
   const [timeSignature, setTimeSignature] = useState(4);
   const [activeBeat, setActiveBeat] = useState(0);
 
-  // Tap tempo state
+  const metronomeTimerRef = React.useRef<number | null>(null);
   const tapTimesRef = React.useRef<number[]>([]);
-
-  useEffect(() => {
-    soundEngine.setOnBeatCallback((beat) => {
-      setActiveBeat(beat);
-    });
-
-    return () => {
-      soundEngine.setOnBeatCallback(null);
-    };
-  }, []);
 
   const handleToggleMetronome = () => {
     if (isMetronomeOn) {
-      soundEngine.stopMetronome();
+      if (metronomeTimerRef.current !== null) {
+        clearInterval(metronomeTimerRef.current);
+        metronomeTimerRef.current = null;
+      }
       setIsMetronomeOn(false);
+      setActiveBeat(0);
     } else {
-      soundEngine.setMetronomeBeats(timeSignature);
-      soundEngine.setMetronomeBpm(bpm);
-      soundEngine.startMetronome();
+      sampleEngine.initAudio();
       setIsMetronomeOn(true);
+      setActiveBeat(0);
+      playClick(0);
+
+      const intervalMs = (60 / bpm) * 1000;
+      let currentB = 0;
+      metronomeTimerRef.current = window.setInterval(() => {
+        currentB = (currentB + 1) % timeSignature;
+        setActiveBeat(currentB);
+        playClick(currentB);
+      }, intervalMs);
     }
   };
+
+  const playClick = (beat: number) => {
+    // Play woodblock / high-pitch tick for beat 1, lower for others
+    const clickMidi = beat === 0 ? 84 : 76;
+    sampleEngine.playNote(clickMidi, beat === 0 ? 0.7 : 0.4);
+    setTimeout(() => {
+      sampleEngine.releaseNote(clickMidi);
+    }, 40);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (metronomeTimerRef.current !== null) {
+        clearInterval(metronomeTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleBpmChange = (newBpm: number) => {
     const clamped = Math.max(40, Math.min(240, Math.round(newBpm)));
     setBpm(clamped);
-    soundEngine.setMetronomeBpm(clamped);
-  };
-
-  const handleTimeSigChange = (beats: number) => {
-    setTimeSignature(beats);
-    soundEngine.setMetronomeBeats(beats);
     if (isMetronomeOn) {
-      soundEngine.stopMetronome();
-      soundEngine.startMetronome();
+      if (metronomeTimerRef.current !== null) {
+        clearInterval(metronomeTimerRef.current);
+      }
+      const intervalMs = (60 / clamped) * 1000;
+      let currentB = activeBeat;
+      metronomeTimerRef.current = window.setInterval(() => {
+        currentB = (currentB + 1) % timeSignature;
+        setActiveBeat(currentB);
+        playClick(currentB);
+      }, intervalMs);
     }
   };
 
   const handleTapTempo = () => {
     const now = performance.now();
     const taps = tapTimesRef.current;
-    
-    // Reset if last tap was more than 2 seconds ago
     if (taps.length > 0 && now - taps[taps.length - 1] > 2000) {
       taps.length = 0;
     }
-
     taps.push(now);
-    if (taps.length > 4) {
-      taps.shift();
-    }
+    if (taps.length > 4) taps.shift();
 
     if (taps.length >= 2) {
       const intervals = [];
@@ -99,232 +108,244 @@ export const SoundControls: React.FC<SoundControlsProps> = ({
         intervals.push(taps[i] - taps[i - 1]);
       }
       const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-      const calculatedBpm = Math.round(60000 / avgInterval);
-      handleBpmChange(calculatedBpm);
+      handleBpmChange(Math.round(60000 / avgInterval));
     }
   };
 
   return (
-    <div className="glass-panel" style={{ padding: '1.25rem', marginTop: '1.5rem' }}>
+    <div style={{
+      background: '#12141a',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      borderRadius: '8px',
+      padding: '16px',
+      marginTop: '16px',
+    }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: '1rem',
+        marginBottom: '14px',
         flexWrap: 'wrap',
-        gap: '0.75rem',
+        gap: '8px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Sliders size={18} color="var(--accent-purple)" />
-          <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>Instrument & Audio Controls</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Sliders size={16} color="#38bdf8" />
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, color: '#f8fafc' }}>
+            Instrument & Acoustic Controls
+          </h3>
         </div>
-
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.4rem',
-          fontSize: '0.75rem',
-          color: 'var(--text-muted)',
-        }}>
-          <Info size={13} />
-          <span>Real-time Web Audio Synthesizer • Low latency</span>
-        </div>
+        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+          Real Sampled Steinway / Yamaha Grand • Physical Damper & Reverb
+        </span>
       </div>
 
-      <div className="controls-grid">
-        {/* Control 1: Sound Engine Tone Selection */}
-        <div className="control-card">
-          <div className="control-title">
-            <Layers size={14} color="var(--accent-purple)" />
-            <span>Tone Generator</span>
-          </div>
-
-          <div className="segmented-group">
-            <button
-              onClick={() => onSoundTypeChange('piano')}
-              className={`segment-btn ${soundType === 'piano' ? 'active' : ''}`}
-            >
-              Modeled Piano
-            </button>
-            <button
-              onClick={() => onSoundTypeChange('soft')}
-              className={`segment-btn ${soundType === 'soft' ? 'active' : ''}`}
-            >
-              Soft Keys
-            </button>
-            <button
-              onClick={() => onSoundTypeChange('synth')}
-              className={`segment-btn ${soundType === 'synth' ? 'active' : ''}`}
-            >
-              Synth Lead
-            </button>
-          </div>
-
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', margin: 0, lineHeight: 1.4 }}>
-            {soundType === 'piano' && 'Physical harmonic synthesis modeled after acoustic piano hammer strikes.'}
-            {soundType === 'soft' && 'Smooth sine-wave electric keys with bell-like overtone resonance.'}
-            {soundType === 'synth' && 'Detuned dual-sawtooth polyphonic synthesizer with 24dB resonant filter.'}
-          </p>
-        </div>
-
-        {/* Control 2: Sustain Pedal */}
-        <div className="control-card">
-          <div className="control-title">
-            <Footprints size={14} color="var(--accent-cyan)" />
-            <span>Sustain Pedal</span>
-          </div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: '12px',
+      }}>
+        {/* Sustain Pedal Card */}
+        <div style={{
+          background: '#181b24',
+          border: '1px solid rgba(255, 255, 255, 0.06)',
+          borderRadius: '6px',
+          padding: '12px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+        }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>
+            Damper Sustain Pedal
+          </span>
 
           <button
             onClick={onSustainToggle}
-            className={`sustain-pedal-btn ${sustain ? 'active' : ''}`}
-            title="Toggle sustain (Shortcut: Spacebar)"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              background: sustain ? 'rgba(56, 189, 248, 0.15)' : 'rgba(0, 0, 0, 0.3)',
+              border: sustain ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
+              color: sustain ? '#38bdf8' : '#94a3b8',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+            }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <div style={{
-                width: 12,
-                height: 12,
-                borderRadius: '50%',
-                background: sustain ? 'var(--accent-purple)' : 'rgba(255, 255, 255, 0.2)',
-                boxShadow: sustain ? '0 0 10px var(--accent-purple)' : 'none',
-              }} />
-              <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                {sustain ? 'Sustain Active' : 'Sustain Off'}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Footprints size={16} />
+              <span>{sustain ? 'Sustain Active' : 'Sustain Off'}</span>
             </div>
-            <span className="pill-badge" style={{ fontSize: '0.7rem' }}>
+            <span style={{
+              fontSize: '0.7rem',
+              fontFamily: 'var(--font-mono)',
+              background: 'rgba(255, 255, 255, 0.06)',
+              padding: '2px 6px',
+              borderRadius: '3px',
+            }}>
               Spacebar
             </span>
           </button>
-
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', margin: 0 }}>
-            Allows notes to ring out naturally after releasing laptop keys.
-          </p>
+          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+            Extends harmonic decay of strings naturally.
+          </span>
         </div>
 
-        {/* Control 3: Octave Preset Switcher */}
-        <div className="control-card">
-          <div className="control-title">
-            <Activity size={14} color="var(--accent-amber)" />
-            <span>Octave Shift</span>
-          </div>
+        {/* Octave Range Preset */}
+        <div style={{
+          background: '#181b24',
+          border: '1px solid rgba(255, 255, 255, 0.06)',
+          borderRadius: '6px',
+          padding: '12px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+        }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>
+            Laptop Keyboard Octave
+          </span>
 
-          <div className="segmented-group">
+          <div style={{ display: 'flex', background: '#0d0f14', padding: '3px', borderRadius: '4px' }}>
             <button
               onClick={() => onOctaveChange(-1)}
-              className={`segment-btn ${octaveOffset === -1 ? 'active' : ''}`}
-              title="Octave 3 (Low)"
+              style={{
+                flex: 1,
+                padding: '5px',
+                border: 'none',
+                borderRadius: '3px',
+                background: octaveOffset === -1 ? '#2563eb' : 'transparent',
+                color: octaveOffset === -1 ? '#fff' : '#94a3b8',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
             >
-              Low (Oct 3)
+              Octave 3 (Low)
             </button>
             <button
               onClick={() => onOctaveChange(0)}
-              className={`segment-btn ${octaveOffset === 0 ? 'active' : ''}`}
-              title="Octave 4 (Default Middle C)"
+              style={{
+                flex: 1,
+                padding: '5px',
+                border: 'none',
+                borderRadius: '3px',
+                background: octaveOffset === 0 ? '#2563eb' : 'transparent',
+                color: octaveOffset === 0 ? '#fff' : '#94a3b8',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
             >
-              Mid (Oct 4)
+              Octave 4 (Mid C)
             </button>
             <button
               onClick={() => onOctaveChange(1)}
-              className={`segment-btn ${octaveOffset === 1 ? 'active' : ''}`}
-              title="Octave 5 (High)"
+              style={{
+                flex: 1,
+                padding: '5px',
+                border: 'none',
+                borderRadius: '3px',
+                background: octaveOffset === 1 ? '#2563eb' : 'transparent',
+                color: octaveOffset === 1 ? '#fff' : '#94a3b8',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
             >
-              High (Oct 5)
+              Octave 5 (High)
             </button>
           </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-            <span>Shortcut: [Z] Down / [X] Up</span>
-            <span style={{ color: 'var(--accent-amber)', fontWeight: 600 }}>
-              Base: {octaveOffset === 0 ? 'Middle C (C4)' : octaveOffset > 0 ? `C${4 + octaveOffset}` : `C${4 + octaveOffset}`}
-            </span>
-          </div>
+          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+            Shift with hotkeys [Z] Down / [X] Up.
+          </span>
         </div>
 
-        {/* Control 4: Functional Metronome */}
-        <div className="control-card">
-          <div className="control-title">
-            <Clock size={14} color="var(--accent-emerald)" />
-            <span>Practice Metronome</span>
-          </div>
+        {/* Metronome */}
+        <div style={{
+          background: '#181b24',
+          border: '1px solid rgba(255, 255, 255, 0.06)',
+          borderRadius: '6px',
+          padding: '12px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+        }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>
+            Practice Metronome
+          </span>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-            {/* Play/Stop button */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <button
               onClick={handleToggleMetronome}
-              className={`btn btn-sm ${isMetronomeOn ? 'btn-danger' : 'btn-primary'}`}
-              style={{ minWidth: 80 }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '5px 10px',
+                borderRadius: '4px',
+                border: 'none',
+                background: isMetronomeOn ? '#ef4444' : '#2563eb',
+                color: '#fff',
+                fontSize: '0.775rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
             >
-              {isMetronomeOn ? <Square size={14} /> : <Play size={14} />}
+              {isMetronomeOn ? <Square size={12} /> : <Play size={12} />}
               <span>{isMetronomeOn ? 'Stop' : 'Start'}</span>
             </button>
 
-            {/* Tap Tempo Button */}
             <button
               onClick={handleTapTempo}
-              className="btn btn-secondary btn-sm"
-              title="Tap repeatedly to set tempo"
+              style={{
+                padding: '4px 8px',
+                borderRadius: '4px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                color: '#94a3b8',
+                fontSize: '0.725rem',
+                cursor: 'pointer',
+              }}
             >
               Tap Tempo
             </button>
 
-            {/* Time signature */}
-            <div style={{ display: 'flex', gap: 3 }}>
-              {[2, 3, 4].map(sig => (
+            <div style={{ display: 'flex', gap: '2px' }}>
+              {[2, 3, 4].map(s => (
                 <button
-                  key={sig}
-                  onClick={() => handleTimeSigChange(sig)}
+                  key={s}
+                  onClick={() => setTimeSignature(s)}
                   style={{
-                    padding: '3px 6px',
-                    fontSize: '0.75rem',
-                    borderRadius: 4,
-                    border: '1px solid var(--border-subtle)',
-                    background: timeSignature === sig ? 'var(--accent-purple)' : 'transparent',
-                    color: timeSignature === sig ? '#fff' : 'var(--text-dim)',
+                    padding: '2px 5px',
+                    borderRadius: '2px',
+                    border: 'none',
+                    background: timeSignature === s ? '#334155' : 'transparent',
+                    color: timeSignature === s ? '#fff' : '#64748b',
+                    fontSize: '0.7rem',
                     cursor: 'pointer',
                   }}
                 >
-                  {sig}/4
+                  {s}/4
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Slider and BPM counter */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <input
               type="range"
-              min="40"
-              max="240"
+              min={40}
+              max={240}
               value={bpm}
               onChange={(e) => handleBpmChange(parseInt(e.target.value, 10))}
               className="custom-range"
+              style={{ flex: 1 }}
             />
-            <span style={{
-              fontFamily: 'var(--font-mono)',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-              color: 'var(--text-main)',
-              minWidth: 55,
-              textAlign: 'right',
-            }}>
+            <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', fontWeight: 700, minWidth: 50, textAlign: 'right' }}>
               {bpm} BPM
             </span>
-          </div>
-
-          {/* Flashing beat indicators */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>Beat Indicator:</span>
-            <div className="beat-leds">
-              {Array.from({ length: timeSignature }).map((_, index) => {
-                const isCurrent = isMetronomeOn && activeBeat === index;
-                const isAccent = index === 0;
-                let className = 'beat-dot';
-                if (isCurrent) {
-                  className += isAccent ? ' accent-beat' : ' regular-beat';
-                }
-                return <div key={index} className={className} />;
-              })}
-            </div>
           </div>
         </div>
       </div>

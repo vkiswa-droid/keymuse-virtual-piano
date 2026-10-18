@@ -36,8 +36,8 @@ export const SongPractice: React.FC<SongPracticeProps> = ({
 
   const audioGuideTimerRef = useRef<number | null>(null);
 
-  const currentSong: Song = SONGS_DATABASE.find(s => s.id === selectedSongId) || SONGS_DATABASE[0];
-  const currentSongNote: SongNote | undefined = currentSong.notes[currentNoteIndex];
+  const currentSong: any = SONGS_DATABASE.find((s: any) => s.id === selectedSongId) || SONGS_DATABASE[0];
+  const currentSongNote: any = currentSong?.notes?.[currentNoteIndex];
 
   // Helper to find laptop key for a given note
   const getLaptopKeyForNote = (noteName: string): string => {
@@ -191,7 +191,7 @@ export const SongPractice: React.FC<SongPracticeProps> = ({
           border: '1px solid var(--border-subtle)',
           flexWrap: 'wrap',
         }}>
-          {SONGS_DATABASE.map(song => (
+          {SONGS_DATABASE.map((song: any) => (
             <button
               key={song.id}
               onClick={() => handleSelectSong(song.id)}
@@ -367,7 +367,7 @@ export const SongPractice: React.FC<SongPracticeProps> = ({
               padding: '0.25rem',
             }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Upcoming:</span>
-              {currentSong.notes.slice(currentNoteIndex + 1, currentNoteIndex + 6).map((n, idx) => (
+              {currentSong.notes.slice(currentNoteIndex + 1, currentNoteIndex + 6).map((n: { note: string; pitch?: string; duration?: number }, idx: number) => (
                 <div
                   key={idx}
                   style={{

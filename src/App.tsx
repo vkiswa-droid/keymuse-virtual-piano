@@ -1,83 +1,47 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
-import { PianoKeyboard } from './components/PianoKeyboard';
+import { Piano88 } from './components/Piano88';
 import { SoundControls } from './components/SoundControls';
-import { SongPractice } from './components/SongPractice';
-import { RecordingStudio } from './components/RecordingStudio';
+import { PracticeView } from './components/PracticeView';
 import { BeginnerAcademy } from './components/BeginnerAcademy';
+import { RecordingStudio } from './components/RecordingStudio';
 import { KeymapGuide } from './components/KeymapGuide';
 import { Footer } from './components/Footer';
-import { soundEngine } from './audio/soundEngine';
-import { SoundType } from './types';
+import { sampleEngine } from './audio/sampleEngine';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'play' | 'songs' | 'learn' | 'record'>('play');
-  const [audioState, setAudioState] = useState<AudioContextState | 'uninitialized'>(soundEngine.getAudioState());
-  const [volume, setVolume] = useState<number>(soundEngine.getVolume());
-  const [isMuted, setIsMuted] = useState<boolean>(soundEngine.getIsMuted());
-  const [soundType, setSoundType] = useState<SoundType>(soundEngine.getSoundType());
-  const [sustain, setSustain] = useState<boolean>(soundEngine.getSustain());
+  const [activeTab, setActiveTab] = useState<'play' | 'practice' | 'learn' | 'studio'>('practice');
+  const [volume, setVolume] = useState<number>(sampleEngine.getVolume());
+  const [isMuted, setIsMuted] = useState<boolean>(sampleEngine.getIsMuted());
+  const [sustain, setSustain] = useState<boolean>(sampleEngine.getSustain());
   const [octaveOffset, setOctaveOffset] = useState<number>(0);
   const [isKeymapOpen, setIsKeymapOpen] = useState<boolean>(false);
 
-  // Active target notes for highlighting (from SongPractice or BeginnerAcademy)
-  const [targetNotes, setTargetNotes] = useState<string[]>([]);
-  const [lastPlayedNote, setLastPlayedNote] = useState<string | null>(null);
-  const [lastReleasedNote, setLastReleasedNote] = useState<string | null>(null);
-
-  const pianoSectionRef = useRef<HTMLDivElement>(null);
-
-  // Subscribe to audio state changes
-  useEffect(() => {
-    const unsubscribe = soundEngine.subscribeStateChange((state) => {
-      setAudioState(state);
-    });
-    return () => unsubscribe();
-  }, []);
+  const pianoSectionRef = React.useRef<HTMLDivElement>(null);
 
   const handleVolumeChange = (newVol: number) => {
-    soundEngine.setVolume(newVol);
+    sampleEngine.setVolume(newVol);
     setVolume(newVol);
     if (isMuted && newVol > 0) {
-      soundEngine.toggleMute();
+      sampleEngine.toggleMute();
       setIsMuted(false);
     }
   };
 
   const handleToggleMute = () => {
-    const muted = soundEngine.toggleMute();
+    const muted = sampleEngine.toggleMute();
     setIsMuted(muted);
-  };
-
-  const handleSoundTypeChange = (type: SoundType) => {
-    soundEngine.setSoundType(type);
-    setSoundType(type);
   };
 
   const handleSustainToggle = () => {
     const next = !sustain;
-    soundEngine.setSustain(next);
+    sampleEngine.setSustain(next);
     setSustain(next);
   };
 
   const handleOctaveChange = (offset: number) => {
     setOctaveOffset(offset);
-  };
-
-  const handleNoteTriggered = (note: string) => {
-    setLastPlayedNote(note);
-    // Reset momentary trigger
-    setTimeout(() => {
-      setLastPlayedNote(null);
-    }, 120);
-  };
-
-  const handleNoteReleased = (note: string) => {
-    setLastReleasedNote(note);
-    setTimeout(() => {
-      setLastReleasedNote(null);
-    }, 120);
   };
 
   const scrollToPiano = () => {
@@ -87,12 +51,17 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="app-container">
-      {/* Top Sticky Navigation */}
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: '100vh',
+      background: '#090a0f',
+      color: '#f8fafc',
+    }}>
+      {/* Top DAW-Style Navigation Bar */}
       <Navbar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
-        audioState={audioState}
         onOpenHelp={() => setIsKeymapOpen(true)}
         volume={volume}
         onVolumeChange={handleVolumeChange}
@@ -100,65 +69,67 @@ export const App: React.FC = () => {
         onToggleMute={handleToggleMute}
       />
 
-      {/* Main Body */}
-      <main className="main-content">
-        {/* Hero Section (Always shown or on 'play' tab for clean focus) */}
+      {/* Main Workspace Area */}
+      <main style={{
+        flex: 1,
+        maxWidth: 1400,
+        width: '100%',
+        margin: '0 auto',
+        padding: '0 16px 32px',
+      }}>
+        {/* Play Tab: Free Play Piano & Hero */}
         {activeTab === 'play' && (
-          <Hero
-            onStartPlaying={scrollToPiano}
-            onExploreSongs={() => setActiveTab('songs')}
-          />
+          <div>
+            <Hero
+              onStartPlaying={scrollToPiano}
+              onExploreSongs={() => setActiveTab('practice')}
+            />
+
+            <div ref={pianoSectionRef} style={{ marginTop: '16px' }}>
+              <Piano88
+                octaveOffset={octaveOffset}
+                onOctaveChange={handleOctaveChange}
+                sustain={sustain}
+              />
+            </div>
+
+            <SoundControls
+              sustain={sustain}
+              onSustainToggle={handleSustainToggle}
+              octaveOffset={octaveOffset}
+              onOctaveChange={handleOctaveChange}
+            />
+          </div>
         )}
 
-        {/* The Piano Keyboard - The core centerpiece of the entire application */}
-        <div ref={pianoSectionRef} style={{ marginTop: activeTab === 'play' ? '0.5rem' : '2rem' }}>
-          <PianoKeyboard
-            octaveOffset={octaveOffset}
-            onOctaveChange={handleOctaveChange}
-            targetNotes={targetNotes}
-            onNoteTriggered={handleNoteTriggered}
-            onNoteReleased={handleNoteReleased}
-          />
-        </div>
-
-        {/* Tab Specific Content */}
-        {activeTab === 'play' && (
-          <SoundControls
-            soundType={soundType}
-            onSoundTypeChange={handleSoundTypeChange}
-            sustain={sustain}
-            onSustainToggle={handleSustainToggle}
-            octaveOffset={octaveOffset}
-            onOctaveChange={handleOctaveChange}
-          />
+        {/* Practice Tab: Flagship Falling-Note Visualizer */}
+        {activeTab === 'practice' && (
+          <div style={{ marginTop: '16px' }}>
+            <PracticeView
+              octaveOffset={octaveOffset}
+              onOctaveChange={handleOctaveChange}
+            />
+          </div>
         )}
 
-        {activeTab === 'songs' && (
-          <SongPractice
-            octaveOffset={octaveOffset}
-            onSetTargetNotes={setTargetNotes}
-            lastPlayedNote={lastPlayedNote}
-          />
-        )}
-
+        {/* Learn Tab: Beginner Academy */}
         {activeTab === 'learn' && (
           <BeginnerAcademy
             octaveOffset={octaveOffset}
-            onSetTargetNotes={setTargetNotes}
-            lastPlayedNote={lastPlayedNote}
+            onOctaveChange={handleOctaveChange}
           />
         )}
 
-        {activeTab === 'record' && (
+        {/* Studio Tab: Recording & MIDI Utility */}
+        {activeTab === 'studio' && (
           <RecordingStudio
-            lastPlayedNote={lastPlayedNote}
-            lastReleasedNote={lastReleasedNote}
-            onSetTargetNotes={setTargetNotes}
+            octaveOffset={octaveOffset}
+            onOctaveChange={handleOctaveChange}
           />
         )}
       </main>
 
-      {/* Keyboard Shortcuts Modal */}
+      {/* Keymap Guide Modal */}
       <KeymapGuide
         octaveOffset={octaveOffset}
         isOpen={isKeymapOpen}
