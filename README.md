@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # KeyMuse — Virtual Laptop Piano & Music Learning Web Application
 
 > **"Your laptop. Your music. Your possibilities."**  
@@ -83,3 +84,6 @@ npx tsc --noEmit
 # Build production bundle
 npm run build
 ```
+=======
+# keymuse-virtual-piano
+>>>>>>> 07d22024581a286e42f44816f0147b964a2c5110
