@@ -101,8 +101,8 @@ a:focus-visible {
 /* Glassmorphism Containers */
 .glass-panel {
   background: var(--bg-card);
-  backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
@@ -143,6 +143,7 @@ a:focus-visible {
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   text-decoration: none;
+  -webkit-user-select: none;
   user-select: none;
   white-space: nowrap;
 }
@@ -281,8 +282,8 @@ a:focus-visible {
   position: relative;
   display: flex;
   justify-content: center;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
 }
 
 @media (max-width: 900px) {
@@ -549,6 +550,7 @@ a:focus-visible {
 .custom-range {
   flex: 1;
   -webkit-appearance: none;
+  appearance: none;
   height: 6px;
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.15);
@@ -623,6 +625,7 @@ a:focus-visible {
   letter-spacing: -0.02em;
   background: linear-gradient(135deg, #ffffff 30%, #c4b5fd 70%, #67e8f9 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 1rem;
 }
@@ -641,6 +644,7 @@ a:focus-visible {
   gap: 0.5rem;
   padding: 0.4rem;
   background: rgba(15, 23, 42, 0.8);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);

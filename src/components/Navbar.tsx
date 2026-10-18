@@ -44,6 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header style={{
       borderBottom: '1px solid var(--border-subtle)',
       background: 'rgba(7, 10, 18, 0.85)',
+      WebkitBackdropFilter: 'blur(16px)',
       backdropFilter: 'blur(16px)',
       position: 'sticky',
       top: 0,
@@ -67,6 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             alignItems: 'center',
             gap: '0.75rem',
             cursor: 'pointer',
+            WebkitUserSelect: 'none',
             userSelect: 'none',
           }}
         >

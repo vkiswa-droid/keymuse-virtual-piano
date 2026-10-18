@@ -21,6 +21,7 @@ export const KeymapGuide: React.FC<KeymapGuideProps> = ({
       inset: 0,
       zIndex: 200,
       background: 'rgba(3, 7, 18, 0.8)',
+      WebkitBackdropFilter: 'blur(8px)',
       backdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
