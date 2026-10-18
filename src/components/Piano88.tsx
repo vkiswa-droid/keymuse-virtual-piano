@@ -8,13 +8,16 @@ import {
   MAX_MIDI 
 } from '../config/piano88';
 import { sampleEngine } from '../audio/sampleEngine';
+import { keyboardMapping } from '../config/keyboardMapping';
+import { KeyboardMappingModal } from './KeyboardMappingModal';
 import { 
   Maximize2, 
   Minimize2, 
   ChevronLeft, 
   ChevronRight, 
   Sliders, 
-  Keyboard as KeyboardIcon 
+  Keyboard as KeyboardIcon,
+  Settings
 } from 'lucide-react';
 
 export interface KeyHighlight {
@@ -45,24 +48,22 @@ export const Piano88: React.FC<Piano88Props> = ({
   const [fit88, setFit88] = useState<boolean>(false);
   const [viewportScroll, setViewportScroll] = useState<number>(0);
   const [visibleRatio, setVisibleRatio] = useState<number>(0.35); // portion of 88 keys visible
+  const [isMappingModalOpen, setIsMappingModalOpen] = useState<boolean>(false);
+  const [mappingVersion, setMappingVersion] = useState<number>(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const pianoBedRef = useRef<HTMLDivElement>(null);
   const isPointerDownRef = useRef(false);
 
-  // Generate 88 keys with laptop mappings shifted by octaveOffset
-  const keys = useMemo(() => generate88Keys(octaveOffset), [octaveOffset]);
-
-  // Code-to-Midi mapping for physical laptop keyboard
-  const codeToMidiMap = useMemo(() => {
-    const map = new Map<string, number>();
-    keys.forEach(k => {
-      if (k.laptopCode) {
-        map.set(k.laptopCode, k.midi);
-      }
+  // Subscribe to keyboard mapping changes
+  useEffect(() => {
+    return keyboardMapping.subscribe(() => {
+      setMappingVersion(v => v + 1);
     });
-    return map;
-  }, [keys]);
+  }, []);
+
+  // Generate 88 keys with laptop mappings shifted by octaveOffset
+  const keys = useMemo(() => generate88Keys(octaveOffset), [octaveOffset, mappingVersion]);
 
   // Fast highlight lookup
   const highlightMap = useMemo(() => {
@@ -99,24 +100,24 @@ export const Piano88: React.FC<Piano88Props> = ({
     if (onNoteUp) onNoteUp(midi, note);
   }, [onNoteUp]);
 
-  // Physical Laptop Keyboard Listener
+  // Physical Laptop Keyboard Listener with full physical key code mapping
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if user is typing in form inputs
       const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) {
         return;
       }
 
       if (e.repeat) return;
 
-      // Octave Shift shortcuts [Z] Down / [X] Up
-      if (e.code === 'KeyZ') {
+      // Octave Shift shortcuts [Z] Down / [X] Up (only if not mapped to a custom note)
+      if (e.code === 'KeyZ' && keyboardMapping.codeToMidi('KeyZ', false) === null) {
         e.preventDefault();
         onOctaveChange(Math.max(-3, octaveOffset - 1));
         return;
       }
-      if (e.code === 'KeyX') {
+      if (e.code === 'KeyX' && keyboardMapping.codeToMidi('KeyX', false) === null) {
         e.preventDefault();
         onOctaveChange(Math.min(3, octaveOffset + 1));
         return;
@@ -129,39 +130,57 @@ export const Piano88: React.FC<Piano88Props> = ({
         return;
       }
 
-      const midi = codeToMidiMap.get(e.code);
-      if (midi !== undefined) {
+      // Resolve physical laptop key through keyboardMapping engine
+      const mappedMidi = keyboardMapping.codeToMidi(e.code, e.shiftKey);
+      if (mappedMidi !== null) {
         e.preventDefault();
-        const keyObj = keys.find(k => k.midi === midi);
+        const effectiveMidi = Math.min(MAX_MIDI, Math.max(MIN_MIDI, mappedMidi + (octaveOffset * 12)));
+        const keyObj = keys.find(k => k.midi === effectiveMidi);
         if (keyObj) {
-          handleNoteDown(midi, keyObj.note);
+          handleNoteDown(effectiveMidi, keyObj.note);
         }
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) {
         return;
       }
 
-      const midi = codeToMidiMap.get(e.code);
-      if (midi !== undefined) {
+      // Spacebar release (if momentary sustain is preferred, sustain is toggled on keydown)
+      if (e.code === 'Space') {
+        return;
+      }
+
+      const mappedMidi = keyboardMapping.codeToMidi(e.code, e.shiftKey);
+      if (mappedMidi !== null) {
         e.preventDefault();
-        const keyObj = keys.find(k => k.midi === midi);
+        const effectiveMidi = Math.min(MAX_MIDI, Math.max(MIN_MIDI, mappedMidi + (octaveOffset * 12)));
+        const keyObj = keys.find(k => k.midi === effectiveMidi);
         if (keyObj) {
-          handleNoteUp(midi, keyObj.note);
+          handleNoteUp(effectiveMidi, keyObj.note);
         }
       }
     };
 
+    // Safety: prevent stuck notes on window focus loss (tab switch, click away)
+    const handleBlur = () => {
+      setActiveMidiKeys(prev => {
+        prev.forEach(m => sampleEngine.releaseNote(m));
+        return new Set();
+      });
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
     };
-  }, [codeToMidiMap, keys, octaveOffset, onOctaveChange, handleNoteDown, handleNoteUp]);
+  }, [keys, octaveOffset, onOctaveChange, handleNoteDown, handleNoteUp]);
 
   // Global mouse up
   useEffect(() => {
@@ -319,6 +338,28 @@ export const Piano88: React.FC<Piano88Props> = ({
             >
               {fit88 ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
               <span>{fit88 ? 'Focused View' : 'Fit 88 Keys'}</span>
+            </button>
+
+            {/* Keyboard Mapping Setup Button */}
+            <button
+              onClick={() => setIsMappingModalOpen(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '3px 10px',
+                background: 'rgba(56, 189, 248, 0.12)',
+                border: '1px solid rgba(56, 189, 248, 0.35)',
+                borderRadius: '4px',
+                color: '#38bdf8',
+                fontSize: '0.725rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+              title="Open full laptop keyboard mapping editor"
+            >
+              <KeyboardIcon size={13} />
+              <span>Key Setup</span>
             </button>
           </div>
         </div>
@@ -561,6 +602,12 @@ export const Piano88: React.FC<Piano88Props> = ({
           })}
         </div>
       </div>
+
+      {/* Visual Keyboard Mapping Setup Modal */}
+      <KeyboardMappingModal
+        isOpen={isMappingModalOpen}
+        onClose={() => setIsMappingModalOpen(false)}
+      />
     </div>
   );
 };

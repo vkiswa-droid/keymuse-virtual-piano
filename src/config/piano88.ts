@@ -5,6 +5,8 @@
  * A4 = 440Hz, C4 = MIDI 60 (Middle C)
  */
 
+import { keyboardMapping } from './keyboardMapping';
+
 export interface Piano88Key {
   midi: number;            // MIDI note number (21 to 108)
   note: string;            // Pitch with octave, e.g. "C4", "F#3"
@@ -148,34 +150,13 @@ export function generate88Keys(octaveOffset: number = 0): Piano88Key[] {
     }
   });
 
-  // Assign laptop keyboard mapping based on octaveOffset
-  // Base octave is 4 (C4 = Middle C) shifted by octaveOffset
-  const targetBaseOctave = 4 + octaveOffset;
-  const laptopMap: Record<string, { key: string; code: string }> = {
-    [`C${targetBaseOctave}`]: { key: 'A', code: 'KeyA' },
-    [`C#${targetBaseOctave}`]: { key: 'W', code: 'KeyW' },
-    [`D${targetBaseOctave}`]: { key: 'S', code: 'KeyS' },
-    [`D#${targetBaseOctave}`]: { key: 'E', code: 'KeyE' },
-    [`E${targetBaseOctave}`]: { key: 'D', code: 'KeyD' },
-    [`F${targetBaseOctave}`]: { key: 'F', code: 'KeyF' },
-    [`F#${targetBaseOctave}`]: { key: 'T', code: 'KeyT' },
-    [`G${targetBaseOctave}`]: { key: 'G', code: 'KeyG' },
-    [`G#${targetBaseOctave}`]: { key: 'Y', code: 'KeyY' },
-    [`A${targetBaseOctave}`]: { key: 'H', code: 'KeyH' },
-    [`A#${targetBaseOctave}`]: { key: 'U', code: 'KeyU' },
-    [`B${targetBaseOctave}`]: { key: 'J', code: 'KeyJ' },
-    [`C${targetBaseOctave + 1}`]: { key: 'K', code: 'KeyK' },
-    [`C#${targetBaseOctave + 1}`]: { key: 'O', code: 'KeyO' },
-    [`D${targetBaseOctave + 1}`]: { key: 'L', code: 'KeyL' },
-    [`D#${targetBaseOctave + 1}`]: { key: 'P', code: 'KeyP' },
-    [`E${targetBaseOctave + 1}`]: { key: ';', code: 'Semicolon' },
-  };
-
+  // Assign laptop keyboard mapping from full keyboardMapping engine
   keys.forEach(k => {
-    const mapping = laptopMap[k.note];
-    if (mapping) {
-      k.laptopKey = mapping.key;
-      k.laptopCode = mapping.code;
+    // If octaveOffset is set (non-zero), transpose the query so the keyboard shift visually moves
+    const effectiveMidi = k.midi - (octaveOffset * 12);
+    const primary = keyboardMapping.getPrimaryLabelForMidi(effectiveMidi);
+    if (primary) {
+      k.laptopKey = primary.label;
     }
   });
 

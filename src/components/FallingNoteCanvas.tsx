@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { ParsedMidiNote } from '../audio/midiParser';
 import { PIANO_88_KEYS, TOTAL_WHITE_KEYS } from '../config/piano88';
+import { keyboardMapping } from '../config/keyboardMapping';
 
 interface FallingNoteCanvasProps {
   notes: ParsedMidiNote[];
@@ -203,13 +204,15 @@ export const FallingNoteCanvas: React.FC<FallingNoteCanvasProps> = ({
         ctx.restore();
       }
 
-      // Note Pitch Label
+      // Note Pitch Label & Laptop Keycap Shortcut
       if (showNoteNames && barHeight > 14 && w > 12) {
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 10px JetBrains Mono, monospace';
+        ctx.font = 'bold 9px JetBrains Mono, monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(n.note, x + w / 2, yBottom - 8);
+        const keyHint = keyboardMapping.getPrimaryLabelForMidi(n.midi);
+        const text = keyHint && w > 24 ? `${n.note} [${keyHint.label}]` : n.note;
+        ctx.fillText(text, x + w / 2, yBottom - 8);
       }
     }
 

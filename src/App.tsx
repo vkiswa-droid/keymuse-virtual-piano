@@ -6,7 +6,7 @@ import { SoundControls } from './components/SoundControls';
 import { PracticeView } from './components/PracticeView';
 import { BeginnerAcademy } from './components/BeginnerAcademy';
 import { RecordingStudio } from './components/RecordingStudio';
-import { KeymapGuide } from './components/KeymapGuide';
+import { KeyboardMappingModal } from './components/KeyboardMappingModal';
 import { Footer } from './components/Footer';
 import { sampleEngine } from './audio/sampleEngine';
 
@@ -129,9 +129,8 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Keymap Guide Modal */}
-      <KeymapGuide
-        octaveOffset={octaveOffset}
+      {/* Full Laptop Keyboard Mapping Setup Modal */}
+      <KeyboardMappingModal
         isOpen={isKeymapOpen}
         onClose={() => setIsKeymapOpen(false)}
       />
